@@ -1,0 +1,212 @@
+/* Screen Representation of A4 Landscape Sheet */
+.sheets-container {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding-bottom: 40px;
+}
+
+.a4-landscape-sheet {
+  width: 297mm;
+  min-height: 210mm;
+  background: #ffffff;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  padding: 8mm 10mm;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10mm;
+  position: relative;
+}
+
+/* Optional Center Cut Line */
+.a4-landscape-sheet.show-cutline::after {
+  content: "";
+  position: absolute;
+  top: 5mm;
+  bottom: 5mm;
+  left: 50%;
+  border-left: 1px dashed #94a3b8;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* =========================================================
+   EXACT EXCEL SLIP TYPOGRAPHY (Regular 400 default, 700 only where specified)
+   ========================================================= */
+.excel-slip {
+  font-family: "Calibri", "Carlito", sans-serif;
+  font-size: 11pt;
+  font-weight: 400;
+  line-height: 1.24;
+  color: #000000;
+  border: 1px solid #000000;
+  padding: 12px 14px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  background: #ffffff;
+}
+
+.excel-slip * {
+  font-weight: 400;
+}
+
+/* Selective Bold Overrides Matching Original Excel Screenshot */
+.excel-slip .fw-bold {
+  font-weight: 700 !important;
+}
+
+/* Blue User-Input Text (#0000FF) */
+.excel-slip .text-blue {
+  color: #0000ff;
+}
+
+/* Cream Banner Header (#FFF2CC) */
+.slip-banner {
+  background-color: #fff2cc;
+  text-align: center;
+  padding: 3px 6px;
+  margin-bottom: 10px;
+  font-size: 11pt;
+  letter-spacing: 0.01em;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Two-Column Key-Value Rows */
+.slip-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.slip-table td {
+  padding: 1px 0;
+  vertical-align: baseline;
+}
+
+.slip-table td.col-label {
+  width: 48%;
+  text-align: left;
+}
+
+.slip-table td.col-val-center {
+  width: 32%;
+  text-align: center;
+}
+
+.slip-table td.col-val-right {
+  width: 32%;
+  text-align: right;
+}
+
+.slip-table td.col-spacer {
+  width: 20%;
+}
+
+/* Spacing Helpers */
+.slip-spacer-sm {
+  height: 8px;
+}
+
+.slip-spacer-md {
+  height: 11px;
+}
+
+.slip-notice-p {
+  margin: 2px 0 0 0;
+  text-align: left;
+  line-height: 1.28;
+}
+
+/* Computation Formula Indentation */
+.computation-block {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  padding-left: 36%;
+}
+
+.computation-formula {
+  padding-left: 18px;
+}
+
+/* Prorated Rent Summary Line in Section 1 */
+.prorated-line {
+  display: flex;
+  padding-left: 36%;
+  gap: 14px;
+}
+
+/* Utility Single Top Border before Total Utility Bills */
+.cell-top-thin-border {
+  border-top: 1px solid #000000;
+}
+
+/* Section 3 Highlighted TOTAL Row (#FFF2CC with top thin line & bottom double line) */
+.total-highlight-row td {
+  background-color: #fff2cc;
+  border-top: 1px solid #000000;
+  border-bottom: 3px double #000000;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Next Billing Schedule Table */
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.schedule-table td.sched-date {
+  width: 26%;
+  padding-left: 6px;
+}
+
+.schedule-table td.sched-desc {
+  width: 74%;
+}
+
+/* =========================================================
+   PRINT MEDIA RULES
+   ========================================================= */
+@page {
+  size: A4 landscape;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    background: #ffffff;
+    height: auto;
+    overflow: visible;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .workspace,
+  .preview-area,
+  .sheets-container {
+    display: block;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+  }
+
+  .a4-landscape-sheet {
+    box-shadow: none;
+    margin: 0;
+    width: 297mm;
+    height: 210mm;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .a4-landscape-sheet:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+}

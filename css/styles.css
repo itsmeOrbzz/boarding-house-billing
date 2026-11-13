@@ -1,0 +1,246 @@
+/* Excel-matched typography & print rules */
+@import url("https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  --excel-yellow: #fff2cc;
+  --excel-blue: #0000ff;
+}
+
+body {
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Exact Excel Calibri / Carlito / Arial look for the Billing Slip */
+.excel-slip {
+  font-family: "Calibri", "Carlito", "Segoe UI", Arial, sans-serif;
+  font-size: 11pt;
+  font-weight: 400 !important;
+  line-height: 1.28;
+  color: #000000;
+  background-color: #ffffff;
+  border: 1px solid #000000;
+  padding: 14px 18px;
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Strictly enforce normal weight (400) on all children unless explicitly marked .excel-bold */
+.excel-slip table,
+.excel-slip tbody,
+.excel-slip tr,
+.excel-slip td,
+.excel-slip th,
+.excel-slip div,
+.excel-slip p,
+.excel-slip span {
+  font-weight: 400;
+}
+
+.excel-slip .excel-bold,
+.excel-slip b,
+.excel-slip strong {
+  font-weight: 700 !important;
+}
+
+.excel-header-banner {
+  background-color: #fff2cc;
+  text-align: center;
+  font-weight: 700 !important;
+  padding: 3px 0;
+  margin-bottom: 10px;
+  letter-spacing: 0.01em;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+.excel-total-banner {
+  background-color: #fff2cc;
+  border-top: 1px solid #000000;
+  border-bottom: 3px double #000000;
+  font-weight: 700 !important;
+  padding: 2px 0;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+.excel-blue {
+  color: #0000ff;
+}
+
+.excel-grid-overlay {
+  background-image:
+    linear-gradient(to right, rgba(203, 213, 225, 0.35) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(203, 213, 225, 0.35) 1px, transparent 1px);
+  background-size: 64px 20px;
+}
+
+/* Editable inline fields on preview */
+.inline-edit:hover {
+  background-color: rgba(59, 130, 246, 0.08);
+  outline: 1px dashed #3b82f6;
+  border-radius: 2px;
+  cursor: text;
+}
+.inline-edit:focus {
+  background-color: #eff6ff;
+  outline: 2px solid #2563eb;
+  border-radius: 2px;
+}
+
+/* Screen representation of A4 Landscape Sheet */
+.a4-landscape-sheet {
+  width: 297mm;
+  min-height: 209mm;
+  background: white;
+  margin: 0 auto 2rem auto;
+  padding: 8mm;
+  box-sizing: border-box;
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.15),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  display: grid;
+  grid-template-columns: 1fr 10mm 1fr;
+  align-items: stretch;
+  position: relative;
+}
+
+.cut-guide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.cut-guide-line {
+  height: 100%;
+  border-left: 1px dashed #94a3b8;
+}
+
+/* Responsive scaling for smaller screens so A4 preview fits nicely */
+@media screen and (max-width: 1400px) {
+  .preview-scale-wrapper {
+    overflow-x: auto;
+    padding-bottom: 1rem;
+  }
+}
+
+/* EXACT PRINT MEDIA QUERIES FOR LANDSCAPE A4 (2 PER PAGE) */
+@page {
+  size: A4 landscape;
+  margin: 0mm;
+}
+.excel-slip i,
+.excel-slip em {
+  font-style: italic !important;
+}
+
+.excel-slip u {
+  text-decoration: underline !important;
+}
+
+/* Restricted Rich Text Editor Box in Sidebar */
+.rich-editor-box {
+  font-family: "Calibri", "Carlito", "Segoe UI", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.35;
+  color: #000000;
+  background-color: #ffffff;
+  outline: none;
+  word-break: break-word;
+}
+
+.rich-editor-box b,
+.rich-editor-box strong {
+  font-weight: 700 !important;
+}
+
+.rich-editor-box i,
+.rich-editor-box em {
+  font-style: italic !important;
+}
+
+.rich-editor-box u {
+  text-decoration: underline !important;
+}
+
+@media print {
+  html,
+  body {
+    width: 297mm;
+    height: 210mm;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  #app-layout {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #preview-panel {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .preview-scale-wrapper {
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .a4-landscape-sheet {
+    width: 297mm !important;
+    height: 209.5mm !important;
+    min-height: 209.5mm !important;
+    max-height: 209.5mm !important;
+    margin: 0 !important;
+    padding: 7mm 9mm !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .a4-landscape-sheet:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  .excel-slip {
+    font-size: 10.5pt !important;
+    line-height: 1.24 !important;
+    padding: 12px 16px !important;
+    height: 100% !important;
+  }
+
+  .excel-grid-overlay {
+    background-image: none !important;
+  }
+
+  .hide-cut-line-print .cut-guide-line {
+    border-left-color: transparent !important;
+  }
+}

@@ -1,1342 +1,1158 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Boarding House Rent & Billing Statement Generator</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <style>
-    /* Excel-matched typography & print rules */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-    :root {
-      --excel-yellow: #FFF2CC;
-      --excel-blue: #0000FF;
-    }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: #f1f5f9;
-      color: #0f172a;
-    }
-
-    /* Exact Excel Calibri / Carlito / Arial look for the Billing Slip */
-    .excel-slip {
-      font-family: 'Calibri', 'Carlito', 'Segoe UI', Arial, sans-serif;
-      font-size: 11pt;
-      line-height: 1.28;
-      color: #000000;
-      background-color: #ffffff;
-      border: 1px solid #000000;
-      padding: 14px 18px;
-      box-sizing: border-box;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .excel-header-banner {
-      background-color: #FFF2CC;
-      text-align: center;
-      font-weight: 700;
-      padding: 3px 0;
-      margin-bottom: 10px;
-      letter-spacing: 0.01em;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-
-    .excel-total-banner {
-      background-color: #FFF2CC;
-      border-top: 1px solid #000000;
-      border-bottom: 3px double #000000;
-      font-weight: 700;
-      padding: 2px 0;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-
-    .excel-blue {
-      color: #0000FF;
-    }
-
-    .excel-grid-overlay {
-      background-image: 
-        linear-gradient(to right, rgba(203, 213, 225, 0.35) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(203, 213, 225, 0.35) 1px, transparent 1px);
-      background-size: 64px 20px;
-    }
-
-    /* Editable inline fields on preview */
-    .inline-edit:hover {
-      background-color: rgba(59, 130, 246, 0.08);
-      outline: 1px dashed #3b82f6;
-      border-radius: 2px;
-      cursor: text;
-    }
-    .inline-edit:focus {
-      background-color: #eff6ff;
-      outline: 2px solid #2563eb;
-      border-radius: 2px;
-    }
-
-    /* Screen representation of A4 Landscape Sheet */
-    .a4-landscape-sheet {
-      width: 297mm;
-      min-height: 209mm;
-      background: white;
-      margin: 0 auto 2rem auto;
-      padding: 8mm;
-      box-sizing: border-box;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-      display: grid;
-      grid-template-columns: 1fr 10mm 1fr;
-      align-items: stretch;
-      position: relative;
-    }
-
-    .cut-guide {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-
-    .cut-guide-line {
-      height: 100%;
-      border-left: 1px dashed #94a3b8;
-    }
-
-    /* Responsive scaling for smaller screens so A4 preview fits nicely */
-    @media screen and (max-width: 1400px) {
-      .preview-scale-wrapper {
-        overflow-x: auto;
-        padding-bottom: 1rem;
-      }
-    }
-
-    /* EXACT PRINT MEDIA QUERIES FOR LANDSCAPE A4 (2 PER PAGE) */
-    @page {
-      size: A4 landscape;
-      margin: 0mm;
-    }
-
-    @media print {
-      html, body {
-        width: 297mm;
-        height: 210mm;
-        margin: 0 !important;
-        padding: 0 !important;
-        background: #ffffff !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-
-      .no-print {
-        display: none !important;
-      }
-
-      #app-layout {
-        display: block !important;
-        margin: 0 !important;
-        padding: 0 !important;
-      }
-
-      #preview-panel {
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: visible !important;
-      }
-
-      .preview-scale-wrapper {
-        overflow: visible !important;
-        padding: 0 !important;
-        margin: 0 !important;
-      }
-
-      .a4-landscape-sheet {
-        width: 297mm !important;
-        height: 209.5mm !important;
-        min-height: 209.5mm !important;
-        max-height: 209.5mm !important;
-        margin: 0 !important;
-        padding: 7mm 9mm !important;
-        box-shadow: none !important;
-        border: none !important;
-        page-break-after: always !important;
-        break-after: page !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-      }
-
-      .a4-landscape-sheet:last-child {
-        page-break-after: auto !important;
-        break-after: auto !important;
-      }
-
-      .excel-slip {
-        font-size: 10.5pt !important;
-        line-height: 1.24 !important;
-        padding: 12px 16px !important;
-        height: 100% !important;
-      }
-
-      .excel-grid-overlay {
-        background-image: none !important;
-      }
-
-      .hide-cut-line-print .cut-guide-line {
-        border-left-color: transparent !important;
-      }
-    }
-  </style>
-</head>
-<body class="min-h-screen flex flex-col">
-
-  <!-- TOP NAVIGATION BAR (Hidden in Print) -->
-  <header class="no-print bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
-    <div class="max-w-[1800px] mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <div class="bg-amber-400 text-slate-950 p-2 rounded-lg font-bold flex items-center justify-center">
-          <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
-        </div>
-        <div>
-          <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
-            Boarding House Billing Generator
-            <span class="text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full">
-              A4 Landscape • 2 Slips / Page
-            </span>
-          </h1>
-          <p class="text-xs text-slate-400">Creates Excel-style side-by-side Rent & Utility Billing Statements</p>
-        </div>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="flex flex-wrap items-center gap-2">
-        <button id="btn-toggle-grid" onclick="toggleGridLines()" class="px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition" title="Show/hide faint Excel gridlines on screen">
-          <i data-lucide="grid" class="w-4 h-4 text-slate-400"></i>
-          <span id="grid-toggle-label">Excel Grid: Off</span>
-        </button>
-
-        <button onclick="openBulkTableModal()" class="px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition">
-          <i data-lucide="table-2" class="w-4 h-4 text-emerald-400"></i>
-          Quick Table Edit (<span id="room-count-badge">2</span> Rooms)
-        </button>
-
-        <button onclick="addRoom()" class="px-3 py-2 rounded-lg text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5 transition shadow-sm">
-          <i data-lucide="plus-circle" class="w-4 h-4"></i>
-          Add Room
-        </button>
-
-        <button onclick="resetToDemoData()" class="px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 hover:bg-rose-950/60 hover:text-rose-200 hover:border-rose-800 text-slate-300 border border-slate-700 flex items-center gap-1.5 transition" title="Restore original Room 1 & Room 2 from screenshot">
-          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-          Reset Demo
-        </button>
-
-        <button onclick="triggerPrint()" class="px-4 py-2 rounded-lg text-sm font-semibold bg-amber-400 hover:bg-amber-300 text-slate-950 flex items-center gap-2 shadow-lg shadow-amber-500/10 transition transform active:scale-95">
-          <i data-lucide="printer" class="w-4 h-4"></i>
-          Print A4 Landscape (2 per page)
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- MAIN WORKSPACE -->
-  <div id="app-layout" class="flex-1 flex flex-col xl:flex-row max-w-[1800px] w-full mx-auto">
-    
-    <!-- LEFT SIDEBAR: EDITOR & SETTINGS (Hidden in Print) -->
-    <aside class="no-print w-full xl:w-[430px] shrink-0 bg-white border-r border-slate-200 flex flex-col h-auto xl:h-[calc(100vh-64px)] xl:sticky xl:top-[64px]">
-      
-      <!-- Sidebar Tabs -->
-      <div class="grid grid-cols-2 border-b border-slate-200 bg-slate-50 p-1.5 gap-1">
-        <button id="tab-btn-rooms" onclick="switchSidebarTab('rooms')" class="py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 bg-white text-slate-900 shadow-sm border border-slate-200/80">
-          <i data-lucide="door-open" class="w-4 h-4 text-indigo-600"></i>
-          Room Bills Editor
-        </button>
-        <button id="tab-btn-global" onclick="switchSidebarTab('global')" class="py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900">
-          <i data-lucide="sliders-horizontal" class="w-4 h-4 text-amber-600"></i>
-          Shared / Global Settings
-        </button>
-      </div>
-
-      <!-- TAB 1: ROOMS EDITOR -->
-      <div id="tab-content-rooms" class="flex-1 overflow-y-auto p-4 space-y-4">
-        
-        <!-- Room Selector Pills -->
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Select Room to Edit</label>
-            <div class="flex items-center gap-1">
-              <button onclick="duplicateActiveRoom()" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-50 transition">
-                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Duplicate
-              </button>
-              <button onclick="addRoom()" class="text-xs text-emerald-600 hover:text-emerald-800 font-medium flex items-center gap-1 px-2 py-0.5 rounded hover:bg-emerald-50 transition">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i> New Room
-              </button>
-            </div>
-          </div>
-          <div id="room-selector-pills" class="flex flex-wrap gap-1.5">
-            <!-- Dynamically populated room pills -->
-          </div>
-        </div>
-
-        <!-- Active Room Form -->
-        <div id="active-room-form-container" class="space-y-4 border-t border-slate-200 pt-4">
-          <!-- Populated by JS -->
-        </div>
-
-      </div>
-
-      <!-- TAB 2: GLOBAL / SHARED DEFAULTS -->
-      <div id="tab-content-global" class="hidden flex-1 overflow-y-auto p-4 space-y-5">
-        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
-          <p class="font-semibold flex items-center gap-1.5 mb-1">
-            <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0"></i>
-            Batch Apply Settings to All Rooms
-          </p>
-          <p class="text-amber-800/90 leading-relaxed">
-            Edit common dates, notices, or rates here and click <strong>"Apply to All Rooms"</strong> to update every bill at once.
-          </p>
-        </div>
-
-        <div class="space-y-3">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1">Statement Header & Notice</h3>
-          <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Statement Title</label>
-            <input type="text" id="global-title" class="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="RENT & BILLING STATEMENT" oninput="updateGlobalState()" />
-          </div>
-
-          <div class="flex items-center justify-between pt-1">
-            <label class="text-xs font-medium text-slate-700">Show "IMPORTANT NOTICE" Section</label>
-            <input type="checkbox" id="global-show-notice" checked class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" onchange="updateGlobalState()" />
-          </div>
-
-          <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Important Notice Text (supports HTML `<b>`)</label>
-            <textarea id="global-notice-text" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none" oninput="updateGlobalState()">To standardize the rental payment schedule, all tenants will follow a fixed payment date every &lt;b&gt;1st day of the month&lt;/b&gt;, regardless of their move-in date.</textarea>
-          </div>
-        </div>
-
-        <div class="space-y-3">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1">Batch Billing Periods & Rates</h3>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Default Rent Mode</label>
-              <select id="batch-rent-mode" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs bg-white">
-                <option value="prorated">Prorated Rent</option>
-                <option value="full">Regular Full Month</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Default Monthly Rent (₱)</label>
-              <input type="number" id="batch-monthly-rent" value="5000" step="100" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs" />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Utility Period (All Rooms)</label>
-              <input type="text" id="batch-util-period" value="Sep 30 to Oct 30" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs" />
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Wifi Fixed Rate (₱)</label>
-              <input type="number" id="batch-wifi-rate" value="500" step="50" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs" />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Next Rent Due Date</label>
-              <input type="text" id="batch-next-rent-date" value="December 1" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs" />
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Next Meter Reading Date</label>
-              <input type="text" id="batch-next-meter-date" value="December 1" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs" />
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Footer Note</label>
-            <input type="text" id="global-footer-note" value="Starting December 1, your regular monthly rent will be due every 1st day of the month." class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs" oninput="updateGlobalState()" />
-          </div>
-
-          <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Sign-off Line</label>
-            <input type="text" id="global-signoff" value="Thank you for your cooperation!" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs" oninput="updateGlobalState()" />
-          </div>
-
-          <div class="flex items-center justify-between pt-2">
-            <label class="text-xs font-medium text-slate-700">Print Center Cut/Fold Dashed Line</label>
-            <input type="checkbox" id="global-print-cutline" checked class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" onchange="updateGlobalState()" />
-          </div>
-
-          <button onclick="applyBatchToAllRooms()" class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow flex items-center justify-center gap-2 transition">
-            <i data-lucide="check-check" class="w-4 h-4"></i>
-            Apply Utility Period, Wifi & Next Dates to All Rooms
-          </button>
-        </div>
-      </div>
-
-      <!-- Sidebar Footer Tip -->
-      <div class="p-3 bg-slate-50 border-t border-slate-200 text-[11px] text-slate-500 flex items-center justify-between">
-        <span><strong class="text-slate-700">Tip:</strong> Blue values on the preview match your Excel sheet.</span>
-        <span id="page-counter-text" class="font-semibold text-slate-700">1 A4 Sheet</span>
-      </div>
-    </aside>
-
-    <!-- RIGHT PANEL: LIVE A4 LANDSCAPE PRINT PREVIEW -->
-    <main id="preview-panel" class="flex-1 p-4 md:p-8 overflow-y-auto">
-      
-      <!-- Helper Banner above A4 sheet (Hidden in Print) -->
-      <div class="no-print max-w-[297mm] mx-auto mb-4 flex flex-wrap items-center justify-between gap-2 bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm">
-        <div class="flex items-center gap-2 text-xs text-slate-600">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-          <span><strong>Live Print Preview:</strong> Exact A4 Landscape proportions (297mm × 210mm). Every 2 rooms share 1 sheet.</span>
-        </div>
-        <div class="flex items-center gap-3 text-xs">
-          <span class="text-slate-500">Click any room card below to select it in the sidebar</span>
-        </div>
-      </div>
-
-      <!-- A4 Sheets Container -->
-      <div class="preview-scale-wrapper">
-        <div id="a4-sheets-container">
-          <!-- Dynamically populated A4 Landscape sheets (2 rooms per sheet) -->
-        </div>
-      </div>
-
-    </main>
-  </div>
-
-  <!-- QUICK TABLE MODAL FOR MULTI-ROOM ENTRY (Hidden in Print) -->
-  <div id="bulk-modal" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-6xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-        <div class="flex items-center gap-2.5">
-          <i data-lucide="table-2" class="w-5 h-5 text-emerald-400"></i>
-          <div>
-            <h2 class="font-bold text-base">Multi-Room Spreadsheet Quick Editor</h2>
-            <p class="text-xs text-slate-400">Rapidly edit all rooms in one table. Automatically arranges 2 rooms per A4 Landscape page.</p>
-          </div>
-        </div>
-        <button onclick="closeBulkTableModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <div class="p-6 overflow-auto flex-1">
-        <table class="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="bg-slate-100 text-slate-700 border-b border-slate-300 font-bold">
-              <th class="p-2.5 border">Room No.</th>
-              <th class="p-2.5 border">Tenants</th>
-              <th class="p-2.5 border">Rent Mode</th>
-              <th class="p-2.5 border">Rent Period</th>
-              <th class="p-2.5 border">Monthly Rent</th>
-              <th class="p-2.5 border">Move-in Day</th>
-              <th class="p-2.5 border">Rem. Days</th>
-              <th class="p-2.5 border">Electricity (₱)</th>
-              <th class="p-2.5 border">Water (₱)</th>
-              <th class="p-2.5 border">Wifi (₱)</th>
-              <th class="p-2.5 border bg-amber-50">Total Due</th>
-              <th class="p-2.5 border text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="bulk-table-body" class="divide-y divide-slate-200">
-            <!-- Populated by JS -->
-          </tbody>
-        </table>
-      </div>
-
-      <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-        <button onclick="addRoom(); renderBulkTable();" class="px-3 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5">
-          <i data-lucide="plus" class="w-4 h-4"></i> Add Another Room Row
-        </button>
-        <button onclick="closeBulkTableModal()" class="px-5 py-2 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white">
-          Done & Return to Preview
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- TOAST NOTIFICATION -->
-  <div id="toast" class="no-print fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl border border-slate-700 text-xs font-medium flex items-center gap-2 transition-all duration-300 opacity-0 pointer-events-none translate-y-2">
-    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
-    <span id="toast-msg">Saved</span>
-  </div>
-
-  <script>
-    // ============================================================================
-    // DEFAULT DEMO DATA (Exact match to User's Uploaded Excel Screenshot)
-    // ============================================================================
-    const DEFAULT_STATE = {
-      activeRoomIndex: 0,
-      showExcelGrid: false,
-      globalSettings: {
-        title: "RENT & BILLING STATEMENT",
-        showNotice: true,
-        noticeHtml: "To standardize the rental payment schedule, all tenants will follow a fixed payment date every <b>1st day of the month</b>, regardless of their move-in date.",
-        footerNote: "Starting December 1, your regular monthly rent will be due every 1st day of the month.",
-        signOff: "Thank you for your cooperation!",
-        printCutLine: true
-      },
-      rooms: [
-        {
-          id: "room-1",
-          roomNo: "1",
-          tenants: 1,
-          rentMode: "prorated", // 'prorated' | 'full'
-          rentPeriod: "Nov 15 to Dec 1",
-          monthlyRent: 5000,
-          moveInDay: "15th Day",
-          remainingDays: 29,
-          divisorDays: 30,
-          utilityPeriod: "Sep 30 to Oct 30",
-          electricity: 160,
-          water: 400,
-          wifi: 500,
-          nextRentDate: "December 1",
-          nextMeterDate: "December 1"
-        },
-        {
-          id: "room-2",
-          roomNo: "2",
-          tenants: 1,
-          rentMode: "prorated",
-          rentPeriod: "Nov 2 to Dec 1",
-          monthlyRent: 5000,
-          moveInDay: "2nd Day",
-          remainingDays: 29,
-          divisorDays: 30,
-          utilityPeriod: "Sep 30 to Oct 30",
-          electricity: 480,
-          water: 200,
-          wifi: 500,
-          nextRentDate: "December 1",
-          nextMeterDate: "December 1"
-        }
-      ]
-    };
-
-    const STORAGE_KEY = "boarding_house_bills_v1";
-    let state = loadState();
-
-    function loadState() {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && Array.isArray(parsed.rooms) && parsed.rooms.length > 0) {
-            return parsed;
-          }
-        }
-      } catch (e) {
-        console.warn("Could not read localStorage:", e);
-      }
-      return JSON.parse(JSON.stringify(DEFAULT_STATE));
-    }
-
-    function saveState() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      } catch (e) {
-        console.warn("Could not save to localStorage:", e);
-      }
-    }
-
-    // ============================================================================
-    // CURRENCY & COMPUTATION HELPERS
-    // ============================================================================
-    function formatPeso(num) {
-      const n = Number(num) || 0;
-      return "₱" + n.toLocaleString("en-PH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-    }
-
-    function computeRoomTotals(room) {
-      const monthlyRent = Number(room.monthlyRent) || 0;
-      const divisor = Number(room.divisorDays) || 30;
-      const remDays = Number(room.remainingDays) || 0;
-
-      let rentDue = monthlyRent;
-      if (room.rentMode === "prorated") {
-        // Exact formula from screenshot: ₱5,000.00 ÷ 30 × 29 days = ₱4,833.33
-        rentDue = (monthlyRent / divisor) * remDays;
-      }
-
-      // Round rentDue to 2 decimal places like Excel display so total matches sum of displayed numbers
-      const roundedRentDue = Math.round((rentDue + Number.EPSILON) * 100) / 100;
-
-      const elec = Number(room.electricity) || 0;
-      const water = Number(room.water) || 0;
-      const wifi = Number(room.wifi) || 0;
-      const totalUtilities = Math.round(((elec + water + wifi) + Number.EPSILON) * 100) / 100;
-      const grandTotal = Math.round(((roundedRentDue + totalUtilities) + Number.EPSILON) * 100) / 100;
-
-      return {
-        rentDue: roundedRentDue,
-        totalUtilities,
-        grandTotal
-      };
-    }
-
-    // Extract integer day from string like "15th Day" or "2nd Day"
-    function parseMoveInDayNumber(str) {
-      const match = String(str).match(/\d+/);
-      return match ? parseInt(match[0], 10) : null;
-    }
-
-    function formatOrdinalDay(n) {
-      const num = parseInt(n, 10);
-      if (isNaN(num)) return n;
-      const s = ["th", "st", "nd", "rd"];
-      const v = num % 100;
-      return num + (s[(v - 20) % 10] || s[v] || s[0]) + " Day";
-    }
-
-    // ============================================================================
-    // RENDERING: SIDEBAR CONTROLS
-    // ============================================================================
-    function renderAll() {
-      saveState();
-      renderRoomSelectorPills();
-      renderActiveRoomForm();
-      renderGlobalSettingsInputs();
-      renderA4Sheets();
-      updateBadges();
-      if (window.lucide) {
-        lucide.createIcons();
-      }
-    }
-
-    function updateBadges() {
-      const count = state.rooms.length;
-      const sheetCount = Math.ceil(count / 2);
-      document.getElementById("room-count-badge").textContent = count;
-      document.getElementById("page-counter-text").textContent =
-        `${sheetCount} A4 Landscape ${sheetCount === 1 ? "Sheet" : "Sheets"} (${count} ${count === 1 ? "Room" : "Rooms"})`;
-    }
-
-    function renderRoomSelectorPills() {
-      const container = document.getElementById("room-selector-pills");
-      container.innerHTML = state.rooms.map((rm, idx) => {
-        const isActive = idx === state.activeRoomIndex;
-        return `
-          <button
-            onclick="selectRoom(${idx})"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border ${
-              isActive
-                ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
-                : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
-            }"
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Boarding House Rent & Billing Statement Generator</title>
+    <!-- Browser Tab Favicon (Bill & Money Icon) -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23fbbf24'/%3E%3Cpath d='M7 5v22l3-2 3 2 3-2 3 2 3-2 3 2V5l-3 2-3-2-3 2-3-2-3 2-3-2z' fill='%23ffffff' stroke='%230f172a' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M16 10v12M19 12.5c0-1.4-1.3-2.5-3-2.5s-3 1.1-3 2.5 1.3 2.5 3 2.5 3 1.1 3 2.5-1.3 2.5-3 2.5-3-1.1-3-2.5' stroke='%23059669' stroke-width='2.2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E"
+    />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Custom & Print Styles -->
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body class="min-h-screen flex flex-col">
+    <!-- TOP NAVIGATION BAR (Hidden in Print) -->
+    <header
+      class="no-print bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md"
+    >
+      <div
+        class="max-w-[1800px] mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="relative bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950 p-2 rounded-xl shadow-md shadow-amber-500/15 flex items-center justify-center border border-amber-200/50"
           >
-            <span>Room ${escapeHtml(rm.roomNo)}</span>
-          </button>
-        `;
-      }).join("");
-    }
-
-    function renderActiveRoomForm() {
-      const container = document.getElementById("active-room-form-container");
-      const rm = state.rooms[state.activeRoomIndex];
-      if (!rm) {
-        container.innerHTML = `<p class="text-xs text-slate-400">No room selected.</p>`;
-        return;
-      }
-
-      const totals = computeRoomTotals(rm);
-
-      container.innerHTML = `
-        <div class="flex items-center justify-between bg-slate-100 px-3 py-2 rounded-lg border border-slate-200">
-          <div class="flex items-center gap-2">
-            <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">
-              ${escapeHtml(rm.roomNo)}
+            <!-- Main Receipt / Bill Icon -->
+            <i data-lucide="receipt-text" class="w-5 h-5 stroke-[2.2]"></i>
+            <!-- Mini Money / Banknote Badge -->
+            <span
+              class="absolute -bottom-1 -right-1 bg-emerald-500 text-white rounded-md p-0.5 shadow-xs border border-slate-900 flex items-center justify-center"
+            >
+              <i data-lucide="banknote" class="w-3 h-3 stroke-[2.5]"></i>
             </span>
-            <div>
-              <h3 class="text-xs font-bold text-slate-800">Editing Room ${escapeHtml(rm.roomNo)}</h3>
-              <p class="text-[11px] text-slate-500">Sheet ${Math.floor(state.activeRoomIndex / 2) + 1} (${state.activeRoomIndex % 2 === 0 ? "Left Slip" : "Right Slip"})</p>
-            </div>
           </div>
-          ${state.rooms.length > 1 ? `
-            <button onclick="deleteRoom(${state.activeRoomIndex})" class="text-xs text-rose-600 hover:text-rose-800 font-medium flex items-center gap-1 px-2 py-1 rounded hover:bg-rose-50 transition">
-              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Remove
-            </button>
-          ` : ""}
+          <h1 class="font-bold text-lg tracking-tight text-white">
+            Boarding House Billing Generator
+          </h1>
         </div>
 
-        <!-- Room & Tenant Metadata -->
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">Room No. <span class="text-blue-600">(Blue)</span></label>
-            <input type="text" value="${escapeHtml(rm.roomNo)}" oninput="updateRoomField('roomNo', this.value)"
-              class="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-blue-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">No. of Tenants <span class="text-blue-600">(Blue)</span></label>
-            <input type="number" min="1" value="${rm.tenants}" oninput="updateRoomField('tenants', this.value)"
-              class="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-blue-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-          </div>
-        </div>
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            onclick="openBulkTableModal()"
+            class="px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition"
+          >
+            <i data-lucide="table-2" class="w-4 h-4 text-emerald-400"></i>
+            Quick Table Edit (<span id="room-count-badge">2</span> Rooms)
+          </button>
 
-        <!-- Section 1: Rent Computation -->
-        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-700">1. Rent Computation</span>
-            <select onchange="updateRoomField('rentMode', this.value, true)" class="text-xs rounded-md border border-slate-300 px-2 py-1 bg-white font-medium text-slate-700">
-              <option value="prorated" ${rm.rentMode === "prorated" ? "selected" : ""}>Prorated Rent Mode</option>
-              <option value="full" ${rm.rentMode === "full" ? "selected" : ""}>Regular Full Month</option>
-            </select>
-          </div>
+          <button
+            onclick="addRoom()"
+            class="px-3 py-2 rounded-lg text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5 transition shadow-sm"
+          >
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            Add Room
+          </button>
 
-          <div class="grid grid-cols-2 gap-2.5">
-            <div>
-              <label class="block text-[11px] font-medium text-slate-600 mb-1">Rent Period</label>
-              <input type="text" value="${escapeHtml(rm.rentPeriod)}" oninput="updateRoomField('rentPeriod', this.value)"
-                placeholder="e.g. Nov 15 to Dec 1"
-                class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-            </div>
-            <div>
-              <label class="block text-[11px] font-medium text-slate-600 mb-1">Monthly Rent (₱)</label>
-              <input type="number" step="50" value="${rm.monthlyRent}" oninput="updateRoomField('monthlyRent', this.value)"
-                class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-            </div>
-          </div>
+          <button
+            onclick="resetToDemoData()"
+            class="px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 hover:bg-rose-950/60 hover:text-rose-200 hover:border-rose-800 text-slate-300 border border-slate-700 flex items-center gap-1.5 transition"
+            title="Restore original Room 1 & Room 2 from screenshot"
+          >
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            Reset Demo
+          </button>
 
-          ${rm.rentMode === "prorated" ? `
-            <div class="grid grid-cols-3 gap-2">
-              <div>
-                <label class="block text-[11px] font-medium text-slate-600 mb-1">Move-in Day</label>
-                <input type="text" value="${escapeHtml(rm.moveInDay)}" oninput="updateRoomField('moveInDay', this.value)"
-                  placeholder="e.g. 15th Day"
-                  class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-              </div>
-              <div>
-                <div class="flex items-center justify-between mb-1">
-                  <label class="text-[11px] font-medium text-slate-600">Rem. Days</label>
-                  <button onclick="autoCalcRemainingDays()" title="Calculate 30 - MoveInDay + 1" class="text-[10px] text-indigo-600 hover:underline font-semibold">Auto</button>
-                </div>
-                <input type="number" step="1" value="${rm.remainingDays}" oninput="updateRoomField('remainingDays', this.value)"
-                  class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-              </div>
-              <div>
-                <label class="block text-[11px] font-medium text-slate-600 mb-1">Days Divisor</label>
-                <input type="number" step="1" value="${rm.divisorDays}" oninput="updateRoomField('divisorDays', this.value)"
-                  class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-              </div>
-            </div>
-          ` : ""}
-
-          <div class="pt-1 border-t border-slate-200 flex items-center justify-between text-xs">
-            <span class="text-slate-600 font-medium">${rm.rentMode === "prorated" ? "Computed Prorated Rent:" : "Full Monthly Rent:"}</span>
-            <span id="sidebar-rent-due" class="font-bold text-slate-900">${formatPeso(totals.rentDue)}</span>
-          </div>
-        </div>
-
-        <!-- Section 2: Utility Bills -->
-        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-700">2. Utility Bills</span>
-          </div>
-
-          <div>
-            <label class="block text-[11px] font-medium text-slate-600 mb-1">Utility Billing Period</label>
-            <input type="text" value="${escapeHtml(rm.utilityPeriod)}" oninput="updateRoomField('utilityPeriod', this.value)"
-              placeholder="e.g. Sep 30 to Oct 30"
-              class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-          </div>
-
-          <div class="grid grid-cols-3 gap-2">
-            <div>
-              <label class="block text-[11px] font-medium text-slate-600 mb-1">Electricity <span class="text-blue-600">(₱)</span></label>
-              <input type="number" step="10" value="${rm.electricity}" oninput="updateRoomField('electricity', this.value)"
-                class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-            </div>
-            <div>
-              <label class="block text-[11px] font-medium text-slate-600 mb-1">Water (₱)</label>
-              <input type="number" step="10" value="${rm.water}" oninput="updateRoomField('water', this.value)"
-                class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-            </div>
-            <div>
-              <label class="block text-[11px] font-medium text-slate-600 mb-1">Wifi (₱)</label>
-              <input type="number" step="10" value="${rm.wifi}" oninput="updateRoomField('wifi', this.value)"
-                class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-            </div>
-          </div>
-
-          <div class="pt-1 border-t border-slate-200 flex items-center justify-between text-xs">
-            <span class="text-slate-600 font-medium">Total Utility Bills:</span>
-            <span id="sidebar-util-total" class="font-bold text-slate-900">${formatPeso(totals.totalUtilities)}</span>
-          </div>
-        </div>
-
-        <!-- Section 3: Next Schedule & Total Summary -->
-        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-700 block">Next Billing Schedule</span>
-          <div class="grid grid-cols-2 gap-2.5">
-            <div>
-              <label class="block text-[11px] font-medium text-slate-600 mb-1">Next Rent Payment Due</label>
-              <input type="text" value="${escapeHtml(rm.nextRentDate)}" oninput="updateRoomField('nextRentDate', this.value)"
-                class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-            </div>
-            <div>
-              <label class="block text-[11px] font-medium text-slate-600 mb-1">Next Meter Reading</label>
-              <input type="text" value="${escapeHtml(rm.nextMeterDate)}" oninput="updateRoomField('nextMeterDate', this.value)"
-                class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Total Banner Preview in Sidebar -->
-        <div class="p-3 rounded-xl bg-amber-100/90 border-2 border-amber-300 flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-900">Room ${escapeHtml(rm.roomNo)} Total to Pay:</span>
-          <span id="sidebar-grand-total" class="text-base font-extrabold text-slate-950">${formatPeso(totals.grandTotal)}</span>
-        </div>
-      `;
-    }
-
-    function renderGlobalSettingsInputs() {
-      const g = state.globalSettings;
-      document.getElementById("global-title").value = g.title;
-      document.getElementById("global-show-notice").checked = g.showNotice;
-      document.getElementById("global-notice-text").value = g.noticeHtml;
-      document.getElementById("global-footer-note").value = g.footerNote;
-      document.getElementById("global-signoff").value = g.signOff;
-      document.getElementById("global-print-cutline").checked = g.printCutLine;
-    }
-
-    // ============================================================================
-    // RENDERING: A4 LANDSCAPE SHEETS (2 BILLS SIDE BY SIDE PER SHEET)
-    // ============================================================================
-    function renderA4Sheets() {
-      const container = document.getElementById("a4-sheets-container");
-      const rooms = state.rooms;
-      const sheetsHtml = [];
-
-      // Chunk rooms into pairs of 2 per Landscape A4 sheet
-      for (let i = 0; i < rooms.length; i += 2) {
-        const leftRoom = rooms[i];
-        const rightRoom = rooms[i + 1] || null;
-        const cutClass = state.globalSettings.printCutLine ? "" : "hide-cut-line-print";
-
-        sheetsHtml.push(`
-          <div class="a4-landscape-sheet ${cutClass}">
-            ${renderSingleExcelSlip(leftRoom, i)}
-            
-            <!-- Center Cut / Fold Margin -->
-            <div class="cut-guide" title="Center Cut / Fold Line">
-              <div class="cut-guide-line"></div>
-            </div>
-
-            ${rightRoom ? renderSingleExcelSlip(rightRoom, i + 1) : renderEmptySlipPlaceholder()}
-          </div>
-        `);
-      }
-
-      container.innerHTML = sheetsHtml.join("");
-    }
-
-    function renderSingleExcelSlip(rm, roomIndex) {
-      const g = state.globalSettings;
-      const totals = computeRoomTotals(rm);
-      const isSelected = roomIndex === state.activeRoomIndex;
-      const gridClass = state.showExcelGrid ? "excel-grid-overlay" : "";
-      const activeRingClass = isSelected ? "ring-2 ring-indigo-500/60" : "";
-
-      const rentLabel = rm.rentMode === "prorated" ? "Prorated Rent:" : "Monthly Rent:";
-
-      return `
-        <div
-          onclick="selectRoomFromPreview(${roomIndex}, event)"
-          class="excel-slip ${gridClass} ${activeRingClass} transition-shadow cursor-pointer"
-        >
-          <div>
-            <!-- Top Yellow Banner: RENT & BILLING STATEMENT -->
-            <div class="excel-header-banner">
-              ${escapeHtml(g.title)}
-            </div>
-
-            <!-- Room No. & No. of Tenants -->
-            <table class="w-full border-collapse mb-3">
-              <tbody>
-                <tr>
-                  <td class="font-bold w-[42%] py-[1px]">Room No.:</td>
-                  <td class="excel-blue w-[58%] py-[1px]">${escapeHtml(rm.roomNo)}</td>
-                </tr>
-                <tr>
-                  <td class="font-bold py-[1px]">No. of Tenants:</td>
-                  <td class="excel-blue py-[1px]">${escapeHtml(rm.tenants)}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <!-- IMPORTANT NOTICE -->
-            ${g.showNotice ? `
-              <div class="mb-3.5">
-                <div class="font-bold">IMPORTANT NOTICE</div>
-                <p class="leading-snug text-[10.5pt]">
-                  ${g.noticeHtml}
-                </p>
-              </div>
-            ` : ""}
-
-            <!-- 1. RENT COMPUTATION -->
-            <div class="mb-3.5">
-              <div class="font-bold">1. RENT COMPUTATION</div>
-              <table class="w-full border-collapse">
-                <tbody>
-                  <tr>
-                    <td class="w-[42%] py-[1px]">Period:</td>
-                    <td class="w-[24%] py-[1px] text-right whitespace-nowrap">${escapeHtml(rm.rentPeriod)}</td>
-                    <td class="w-[34%]"></td>
-                  </tr>
-                  <tr>
-                    <td class="py-[1px]">Monthly Rent:</td>
-                    <td class="excel-blue py-[1px] text-right whitespace-nowrap">${formatPeso(rm.monthlyRent)}</td>
-                    <td></td>
-                  </tr>
-                  ${rm.rentMode === "prorated" ? `
-                    <tr>
-                      <td class="py-[1px]">Move-in Day:</td>
-                      <td class="excel-blue py-[1px] text-right whitespace-nowrap">${escapeHtml(rm.moveInDay)}</td>
-                      <td></td>
-                    </tr>
-                    <tr>
-                      <td class="py-[1px]">Remaining Days:</td>
-                      <td class="excel-blue py-[1px] text-right whitespace-nowrap">${escapeHtml(rm.remainingDays)}</td>
-                      <td></td>
-                    </tr>
-                    <tr><td colspan="3" class="h-2.5"></td></tr>
-                    <tr>
-                      <td></td>
-                      <td colspan="2" class="py-[1px]">Computation:</td>
-                    </tr>
-                    <tr>
-                      <td></td>
-                      <td colspan="2" class="py-[1px] whitespace-nowrap">
-                        <span class="inline-block w-[41%] text-right pr-1">${formatPeso(rm.monthlyRent)} &divide;</span>
-                        <span>${escapeHtml(rm.divisorDays)} &times; ${escapeHtml(rm.remainingDays)} days</span>
-                      </td>
-                    </tr>
-                    <tr><td colspan="3" class="h-2.5"></td></tr>
-                    <tr>
-                      <td></td>
-                      <td colspan="2" class="font-bold py-[1px] whitespace-nowrap">
-                        <span class="inline-block w-[41%]">Prorated Rent:</span>
-                        <span>${formatPeso(totals.rentDue)}</span>
-                      </td>
-                    </tr>
-                  ` : `
-                    <tr><td colspan="3" class="h-2"></td></tr>
-                    <tr>
-                      <td></td>
-                      <td colspan="2" class="font-bold py-[1px] whitespace-nowrap">
-                        <span class="inline-block w-[41%]">Rent Due:</span>
-                        <span>${formatPeso(totals.rentDue)}</span>
-                      </td>
-                    </tr>
-                  `}
-                </tbody>
-              </table>
-            </div>
-
-            <!-- 2. UTILITY BILLS -->
-            <div class="mb-3.5">
-              <div class="font-bold">2. UTILITY BILLS</div>
-              <table class="w-full border-collapse">
-                <tbody>
-                  <tr>
-                    <td class="w-[42%] py-[1px]">Period:</td>
-                    <td class="w-[24%] py-[1px] text-right whitespace-nowrap">${escapeHtml(rm.utilityPeriod)}</td>
-                    <td class="w-[34%]"></td>
-                  </tr>
-                  <tr>
-                    <td class="py-[1px]">Electricity:</td>
-                    <td class="excel-blue py-[1px] text-right whitespace-nowrap">${formatPeso(rm.electricity)}</td>
-                    <td></td>
-                  </tr>
-                  <tr>
-                    <td class="py-[1px]">Water:</td>
-                    <td class="py-[1px] text-right whitespace-nowrap">${formatPeso(rm.water)}</td>
-                    <td></td>
-                  </tr>
-                  <tr>
-                    <td class="py-[1px]">Wifi Connection:</td>
-                    <td class="py-[1px] text-right whitespace-nowrap">${formatPeso(rm.wifi)}</td>
-                    <td></td>
-                  </tr>
-                  <tr>
-                    <td class="font-bold py-[1px]">Total Utility Bills:</td>
-                    <td class="py-[1px] text-right border-t border-black whitespace-nowrap">${formatPeso(totals.totalUtilities)}</td>
-                    <td></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- 3. TOTAL AMOUNT TO PAY -->
-            <div class="mb-4">
-              <div class="font-bold">3. TOTAL AMOUNT TO PAY</div>
-              <table class="w-full border-collapse">
-                <tbody>
-                  <tr>
-                    <td class="w-[42%] py-[1px]">${rentLabel}</td>
-                    <td class="w-[24%] py-[1px] text-right whitespace-nowrap">${formatPeso(totals.rentDue)}</td>
-                    <td class="w-[34%]"></td>
-                  </tr>
-                  <tr>
-                    <td class="py-[1px]">Utility Bills:</td>
-                    <td class="py-[1px] text-right whitespace-nowrap">${formatPeso(totals.totalUtilities)}</td>
-                    <td></td>
-                  </tr>
-                  <tr>
-                    <td class="excel-total-banner pl-0.5">TOTAL:</td>
-                    <td class="excel-total-banner text-right pr-0.5 whitespace-nowrap">${formatPeso(totals.grandTotal)}</td>
-                    <td></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- NEXT BILLING SCHEDULE (Bottom anchored cleanly) -->
-          <div class="pt-1">
-            <div class="font-bold">NEXT BILLING SCHEDULE</div>
-            <table class="w-full border-collapse mb-3">
-              <tbody>
-                <tr>
-                  <td class="w-[28%] excel-blue font-bold pl-2 py-[1px] whitespace-nowrap">${escapeHtml(rm.nextRentDate)}</td>
-                  <td class="w-[72%] py-[1px]">- Next rent payment due.</td>
-                </tr>
-                <tr>
-                  <td class="excel-blue font-bold pl-2 py-[1px] whitespace-nowrap">${escapeHtml(rm.nextMeterDate)}</td>
-                  <td class="py-[1px]">- Next electricity and water meter reading.</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <p class="mb-3 text-[10.5pt]">
-              ${escapeHtml(g.footerNote)}
-            </p>
-            <p class="text-[10.5pt]">
-              ${escapeHtml(g.signOff)}
-            </p>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderEmptySlipPlaceholder() {
-      return `
-        <div class="border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center p-8 text-center no-print bg-slate-50/50">
-          <div class="w-10 h-10 rounded-full bg-slate-200/70 text-slate-500 flex items-center justify-center mb-2">
-            <i data-lucide="plus" class="w-5 h-5"></i>
-          </div>
-          <p class="text-xs font-semibold text-slate-600 mb-1">Empty Right Half of A4 Page</p>
-          <p class="text-[11px] text-slate-400 max-w-[220px] mb-3">Add another room bill to print 2 bills side-by-side on this sheet.</p>
-          <button onclick="addRoom()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition">
-            + Add Room for Right Side
+          <button
+            onclick="triggerPrint()"
+            class="px-4 py-2 rounded-lg text-sm font-semibold bg-amber-400 hover:bg-amber-300 text-slate-950 flex items-center gap-2 shadow-lg shadow-amber-500/10 transition transform active:scale-95"
+          >
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            Print A4 Landscape (2 per page)
           </button>
         </div>
-        <div class="hidden print:block"></div>
-      `;
-    }
+      </div>
+    </header>
 
-    // ============================================================================
-    // INTERACTION & STATE UPDATES
-    // ============================================================================
-    function selectRoom(index) {
-      state.activeRoomIndex = index;
-      renderAll();
-    }
+    <!-- MAIN WORKSPACE -->
+    <div
+      id="app-layout"
+      class="flex-1 flex flex-col xl:flex-row max-w-[1800px] w-full mx-auto"
+    >
+      <!-- LEFT SIDEBAR: EDITOR & SETTINGS (Hidden in Print) -->
+      <aside
+        class="no-print w-full xl:w-[430px] shrink-0 bg-white border-r border-slate-200 flex flex-col h-auto xl:h-[calc(100vh-64px)] xl:sticky xl:top-[64px]"
+      >
+        <!-- Sidebar Tabs -->
+        <div
+          class="grid grid-cols-2 border-b border-slate-200 bg-slate-50 p-1.5 gap-1"
+        >
+          <button
+            id="tab-btn-rooms"
+            onclick="switchSidebarTab('rooms')"
+            class="py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 bg-white text-slate-900 shadow-sm border border-slate-200/80"
+          >
+            <i data-lucide="door-open" class="w-4 h-4 text-indigo-600"></i>
+            Room Bills Editor
+          </button>
+          <button
+            id="tab-btn-global"
+            onclick="switchSidebarTab('global')"
+            class="py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900"
+          >
+            <i
+              data-lucide="sliders-horizontal"
+              class="w-4 h-4 text-amber-600"
+            ></i>
+            Shared / Global Settings
+          </button>
+        </div>
 
-    function selectRoomFromPreview(index, event) {
-      if (state.activeRoomIndex !== index) {
-        state.activeRoomIndex = index;
-        switchSidebarTab('rooms');
-        renderAll();
-      }
-    }
-
-    function updateRoomField(field, value, fullRerender = false) {
-      const rm = state.rooms[state.activeRoomIndex];
-      if (!rm) return;
-
-      if (["tenants", "monthlyRent", "remainingDays", "divisorDays", "electricity", "water", "wifi"].includes(field)) {
-        rm[field] = value === "" ? "" : Number(value);
-      } else {
-        rm[field] = value;
-      }
-
-      saveState();
-
-      if (fullRerender) {
-        renderAll();
-      } else {
-        // Fast live update without losing input focus
-        const totals = computeRoomTotals(rm);
-        const rentEl = document.getElementById("sidebar-rent-due");
-        const utilEl = document.getElementById("sidebar-util-total");
-        const grandEl = document.getElementById("sidebar-grand-total");
-        if (rentEl) rentEl.textContent = formatPeso(totals.rentDue);
-        if (utilEl) utilEl.textContent = formatPeso(totals.totalUtilities);
-        if (grandEl) grandEl.textContent = formatPeso(totals.grandTotal);
-
-        renderRoomSelectorPills();
-        renderA4Sheets();
-        if (window.lucide) lucide.createIcons();
-      }
-    }
-
-    function autoCalcRemainingDays() {
-      const rm = state.rooms[state.activeRoomIndex];
-      if (!rm) return;
-      const moveDayNum = parseMoveInDayNumber(rm.moveInDay);
-      const divisor = Number(rm.divisorDays) || 30;
-      if (moveDayNum && moveDayNum >= 1 && moveDayNum <= divisor) {
-        rm.remainingDays = divisor - moveDayNum + 1;
-        renderAll();
-        showToast(`Remaining days calculated (${divisor} - ${moveDayNum} + 1 = ${rm.remainingDays})`);
-      } else {
-        showToast("Enter a Move-in Day number like '15th Day' first");
-      }
-    }
-
-    function addRoom() {
-      const lastRoom = state.rooms[state.rooms.length - 1] || DEFAULT_STATE.rooms[0];
-      const nextNum = state.rooms.length + 1;
-      const newRoom = JSON.parse(JSON.stringify(lastRoom));
-      newRoom.id = "room-" + Date.now();
-      newRoom.roomNo = String(nextNum);
-      state.rooms.push(newRoom);
-      state.activeRoomIndex = state.rooms.length - 1;
-      switchSidebarTab('rooms');
-      renderAll();
-      showToast(`Added Room ${newRoom.roomNo}`);
-    }
-
-    function duplicateActiveRoom() {
-      const current = state.rooms[state.activeRoomIndex];
-      if (!current) return;
-      const copy = JSON.parse(JSON.stringify(current));
-      copy.id = "room-" + Date.now();
-      copy.roomNo = String(state.rooms.length + 1);
-      state.rooms.splice(state.activeRoomIndex + 1, 0, copy);
-      state.activeRoomIndex += 1;
-      renderAll();
-      showToast(`Duplicated as Room ${copy.roomNo}`);
-    }
-
-    function deleteRoom(index) {
-      if (state.rooms.length <= 1) return;
-      const removed = state.rooms.splice(index, 1)[0];
-      if (state.activeRoomIndex >= state.rooms.length) {
-        state.activeRoomIndex = state.rooms.length - 1;
-      }
-      renderAll();
-      showToast(`Removed Room ${removed.roomNo}`);
-    }
-
-    function updateGlobalState() {
-      state.globalSettings.title = document.getElementById("global-title").value;
-      state.globalSettings.showNotice = document.getElementById("global-show-notice").checked;
-      state.globalSettings.noticeHtml = document.getElementById("global-notice-text").value;
-      state.globalSettings.footerNote = document.getElementById("global-footer-note").value;
-      state.globalSettings.signOff = document.getElementById("global-signoff").value;
-      state.globalSettings.printCutLine = document.getElementById("global-print-cutline").checked;
-      saveState();
-      renderA4Sheets();
-    }
-
-    function applyBatchToAllRooms() {
-      const mode = document.getElementById("batch-rent-mode").value;
-      const monthlyRent = Number(document.getElementById("batch-monthly-rent").value) || 5000;
-      const utilPeriod = document.getElementById("batch-util-period").value;
-      const wifiRate = Number(document.getElementById("batch-wifi-rate").value) || 0;
-      const nextRentDate = document.getElementById("batch-next-rent-date").value;
-      const nextMeterDate = document.getElementById("batch-next-meter-date").value;
-
-      state.rooms.forEach(rm => {
-        rm.rentMode = mode;
-        rm.monthlyRent = monthlyRent;
-        rm.utilityPeriod = utilPeriod;
-        rm.wifi = wifiRate;
-        rm.nextRentDate = nextRentDate;
-        rm.nextMeterDate = nextMeterDate;
-      });
-
-      renderAll();
-      showToast(`Applied shared settings to all ${state.rooms.length} rooms!`);
-    }
-
-    function switchSidebarTab(tab) {
-      const roomsBtn = document.getElementById("tab-btn-rooms");
-      const globalBtn = document.getElementById("tab-btn-global");
-      const roomsContent = document.getElementById("tab-content-rooms");
-      const globalContent = document.getElementById("tab-content-global");
-
-      if (tab === "rooms") {
-        roomsContent.classList.remove("hidden");
-        globalContent.classList.add("hidden");
-        roomsBtn.className = "py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 bg-white text-slate-900 shadow-sm border border-slate-200/80";
-        globalBtn.className = "py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900";
-      } else {
-        roomsContent.classList.add("hidden");
-        globalContent.classList.remove("hidden");
-        globalBtn.className = "py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 bg-white text-slate-900 shadow-sm border border-slate-200/80";
-        roomsBtn.className = "py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900";
-      }
-    }
-
-    function toggleGridLines() {
-      state.showExcelGrid = !state.showExcelGrid;
-      document.getElementById("grid-toggle-label").textContent = state.showExcelGrid ? "Excel Grid: On" : "Excel Grid: Off";
-      renderA4Sheets();
-    }
-
-    function resetToDemoData() {
-      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
-      saveState();
-      renderAll();
-      showToast("Reset to original Room 1 & Room 2 screenshot data");
-    }
-
-    function triggerPrint() {
-      window.print();
-    }
-
-    // ============================================================================
-    // MULTI-ROOM QUICK SPREADSHEET TABLE MODAL
-    // ============================================================================
-    function openBulkTableModal() {
-      renderBulkTable();
-      const modal = document.getElementById("bulk-modal");
-      modal.classList.remove("hidden");
-      modal.classList.add("flex");
-      if (window.lucide) lucide.createIcons();
-    }
-
-    function closeBulkTableModal() {
-      const modal = document.getElementById("bulk-modal");
-      modal.classList.add("hidden");
-      modal.classList.remove("flex");
-      renderAll();
-    }
-
-    function renderBulkTable() {
-      const tbody = document.getElementById("bulk-table-body");
-      tbody.innerHTML = state.rooms.map((rm, idx) => {
-        const totals = computeRoomTotals(rm);
-        return `
-          <tr class="hover:bg-slate-50">
-            <td class="p-1.5 border">
-              <input type="text" value="${escapeHtml(rm.roomNo)}" oninput="updateBulkRoom(${idx}, 'roomNo', this.value)"
-                class="w-14 px-2 py-1 border rounded font-bold text-blue-700" />
-            </td>
-            <td class="p-1.5 border">
-              <input type="number" value="${rm.tenants}" oninput="updateBulkRoom(${idx}, 'tenants', this.value)"
-                class="w-14 px-2 py-1 border rounded text-blue-700" />
-            </td>
-            <td class="p-1.5 border">
-              <select onchange="updateBulkRoom(${idx}, 'rentMode', this.value); renderBulkTable();" class="px-2 py-1 border rounded bg-white">
-                <option value="prorated" ${rm.rentMode === "prorated" ? "selected" : ""}>Prorated</option>
-                <option value="full" ${rm.rentMode === "full" ? "selected" : ""}>Full Month</option>
-              </select>
-            </td>
-            <td class="p-1.5 border">
-              <input type="text" value="${escapeHtml(rm.rentPeriod)}" oninput="updateBulkRoom(${idx}, 'rentPeriod', this.value)"
-                class="w-32 px-2 py-1 border rounded" />
-            </td>
-            <td class="p-1.5 border">
-              <input type="number" step="100" value="${rm.monthlyRent}" oninput="updateBulkRoom(${idx}, 'monthlyRent', this.value)"
-                class="w-24 px-2 py-1 border rounded text-blue-700 font-semibold" />
-            </td>
-            <td class="p-1.5 border">
-              <input type="text" value="${escapeHtml(rm.moveInDay)}" oninput="updateBulkRoom(${idx}, 'moveInDay', this.value)"
-                class="w-24 px-2 py-1 border rounded text-blue-700" ${rm.rentMode === 'full' ? 'disabled' : ''} />
-            </td>
-            <td class="p-1.5 border">
-              <input type="number" value="${rm.remainingDays}" oninput="updateBulkRoom(${idx}, 'remainingDays', this.value)"
-                class="w-16 px-2 py-1 border rounded text-blue-700" ${rm.rentMode === 'full' ? 'disabled' : ''} />
-            </td>
-            <td class="p-1.5 border">
-              <input type="number" step="10" value="${rm.electricity}" oninput="updateBulkRoom(${idx}, 'electricity', this.value)"
-                class="w-20 px-2 py-1 border rounded text-blue-700 font-semibold" />
-            </td>
-            <td class="p-1.5 border">
-              <input type="number" step="10" value="${rm.water}" oninput="updateBulkRoom(${idx}, 'water', this.value)"
-                class="w-20 px-2 py-1 border rounded" />
-            </td>
-            <td class="p-1.5 border">
-              <input type="number" step="10" value="${rm.wifi}" oninput="updateBulkRoom(${idx}, 'wifi', this.value)"
-                class="w-20 px-2 py-1 border rounded" />
-            </td>
-            <td id="bulk-total-${idx}" class="p-2 border bg-amber-50 font-bold text-slate-900 whitespace-nowrap">
-              ${formatPeso(totals.grandTotal)}
-            </td>
-            <td class="p-1.5 border text-center">
-              ${state.rooms.length > 1 ? `
-                <button onclick="deleteRoom(${idx}); renderBulkTable();" class="text-rose-600 hover:bg-rose-50 p-1 rounded" title="Delete Room">
-                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+        <!-- TAB 1: ROOMS EDITOR -->
+        <div
+          id="tab-content-rooms"
+          class="flex-1 overflow-y-auto p-4 space-y-4"
+        >
+          <!-- Room Selector Pills -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label
+                class="text-xs font-bold uppercase tracking-wider text-slate-500"
+                >Select Room to Edit</label
+              >
+              <div class="flex items-center gap-1">
+                <button
+                  onclick="duplicateActiveRoom()"
+                  class="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-50 transition"
+                >
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i> Duplicate
                 </button>
-              ` : ""}
-            </td>
-          </tr>
-        `;
-      }).join("");
-      if (window.lucide) lucide.createIcons();
-    }
+                <button
+                  onclick="addRoom()"
+                  class="text-xs text-emerald-600 hover:text-emerald-800 font-medium flex items-center gap-1 px-2 py-0.5 rounded hover:bg-emerald-50 transition"
+                >
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i> New Room
+                </button>
+              </div>
+            </div>
+            <div id="room-selector-pills" class="flex flex-wrap gap-1.5">
+              <!-- Dynamically populated room pills -->
+            </div>
+          </div>
 
-    function updateBulkRoom(idx, field, value) {
-      const rm = state.rooms[idx];
-      if (!rm) return;
-      if (["tenants", "monthlyRent", "remainingDays", "divisorDays", "electricity", "water", "wifi"].includes(field)) {
-        rm[field] = value === "" ? "" : Number(value);
-      } else {
-        rm[field] = value;
-      }
-      saveState();
-      const totals = computeRoomTotals(rm);
-      const totalCell = document.getElementById(`bulk-total-${idx}`);
-      if (totalCell) totalCell.textContent = formatPeso(totals.grandTotal);
-    }
+          <!-- Active Room Form -->
+          <div
+            id="active-room-form-container"
+            class="space-y-4 border-t border-slate-200 pt-4"
+          >
+            <!-- Populated by JS -->
+          </div>
+        </div>
 
-    // ============================================================================
-    // UTILITIES
-    // ============================================================================
-    function escapeHtml(str) {
-      return String(str ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-    }
+        <!-- TAB 2: GLOBAL / SHARED DEFAULTS -->
+        <div
+          id="tab-content-global"
+          class="hidden flex-1 overflow-y-auto p-4 space-y-5"
+        >
+          <div
+            class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900"
+          >
+            <p class="font-semibold flex items-center gap-1.5 mb-1">
+              <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0"></i>
+              Batch Apply Settings to All Rooms
+            </p>
+            <p class="text-amber-800/90 leading-relaxed">
+              Highlight any text in the notice or footer boxes below to make it
+              <strong>Bold</strong>, <em>Italic</em>, <u>Underlined</u>, or
+              <span class="text-blue-700 font-semibold">Blue</span>. Font family
+              and size are locked to match the statement.
+            </p>
+          </div>
 
-    let toastTimeout = null;
-    function showToast(message) {
-      const toast = document.getElementById("toast");
-      const msg = document.getElementById("toast-msg");
-      msg.textContent = message;
-      toast.classList.remove("opacity-0", "translate-y-2");
-      toast.classList.add("opacity-100", "translate-y-0");
-      clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => {
-        toast.classList.add("opacity-0", "translate-y-2");
-        toast.classList.remove("opacity-100", "translate-y-0");
-      }, 2600);
-    }
+          <div class="space-y-3">
+            <h3
+              class="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1"
+            >
+              Statement Header &amp; Notice
+            </h3>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1"
+                >Statement Title</label
+              >
+              <input
+                type="text"
+                id="global-title"
+                class="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                value="RENT & BILLING STATEMENT"
+                oninput="updateGlobalState()"
+              />
+            </div>
 
-    // Initialize on load
-    window.addEventListener("DOMContentLoaded", () => {
-      renderAll();
-    });
-  </script>
-</body>
+            <div class="flex items-center justify-between pt-1">
+              <label class="text-xs font-medium text-slate-700"
+                >Show "IMPORTANT NOTICE" Section</label
+              >
+              <input
+                type="checkbox"
+                id="global-show-notice"
+                checked
+                class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                onchange="updateGlobalState()"
+              />
+            </div>
+
+            <!-- Rich Text Editor: Important Notice -->
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1"
+                >Important Notice Text</label
+              >
+              <div
+                class="border border-slate-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 bg-white"
+              >
+                <div
+                  class="bg-slate-100 border-b border-slate-200 px-2 py-1 flex items-center gap-1"
+                >
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-notice-editor', 'bold');
+                    "
+                    class="px-2 py-0.5 rounded hover:bg-slate-200 text-xs font-bold text-slate-800"
+                    title="Bold (Ctrl+B)"
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-notice-editor', 'italic');
+                    "
+                    class="px-2 py-0.5 rounded hover:bg-slate-200 text-xs italic font-serif text-slate-800"
+                    title="Italic (Ctrl+I)"
+                  >
+                    I
+                  </button>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-notice-editor', 'underline');
+                    "
+                    class="px-2 py-0.5 rounded hover:bg-slate-200 text-xs underline text-slate-800"
+                    title="Underline (Ctrl+U)"
+                  >
+                    U
+                  </button>
+                  <span class="h-3.5 w-px bg-slate-300 mx-0.5"></span>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-notice-editor', 'blue');
+                    "
+                    class="px-1.5 py-0.5 rounded hover:bg-blue-50 text-[11px] font-bold text-blue-700 border border-blue-200 bg-white"
+                    title="Excel Blue Text"
+                  >
+                    Blue
+                  </button>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-notice-editor', 'black');
+                    "
+                    class="px-1.5 py-0.5 rounded hover:bg-slate-200 text-[11px] font-semibold text-slate-900 border border-slate-300 bg-white"
+                    title="Default Black Text"
+                  >
+                    Black
+                  </button>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-notice-editor', 'clear');
+                    "
+                    class="ml-auto px-1.5 py-0.5 rounded hover:bg-rose-50 text-[10px] font-medium text-slate-500 hover:text-rose-600"
+                    title="Clear formatting on selection"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div
+                  id="global-notice-editor"
+                  contenteditable="true"
+                  oninput="onRichEditorInput()"
+                  onpaste="handleRichPaste(event)"
+                  class="rich-editor-box p-2.5 min-h-[64px]"
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <h3
+              class="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1"
+            >
+              Batch Billing Periods &amp; Rates
+            </h3>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1"
+                  >Default Rent Mode</label
+                >
+                <select
+                  id="batch-rent-mode"
+                  class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs bg-white"
+                >
+                  <option value="prorated">Prorated Rent</option>
+                  <option value="full">Regular Full Month</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1"
+                  >Default Monthly Rent (₱)</label
+                >
+                <input
+                  type="number"
+                  id="batch-monthly-rent"
+                  value="5000"
+                  step="100"
+                  class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2.5">
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1"
+                  >Utility Period</label
+                >
+                <div class="relative">
+                  <input
+                    type="text"
+                    id="batch-util-period"
+                    value="Sep 30 to Oct 30"
+                    readonly
+                    onclick="
+                      openDatePickerModal({
+                        targetType: 'batchInput',
+                        inputId: 'batch-util-period',
+                        mode: 'range',
+                        label: 'Batch Utility Billing Period',
+                      })
+                    "
+                    class="w-full rounded-lg border border-slate-300 pl-2 pr-6 py-1.5 text-xs bg-white cursor-pointer hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                  <i
+                    data-lucide="calendar"
+                    class="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
+                  ></i>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1"
+                  >Wifi Rate (₱)</label
+                >
+                <input
+                  type="number"
+                  id="batch-wifi-rate"
+                  value="500"
+                  step="50"
+                  class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1"
+                  >Rate / kWh (₱)</label
+                >
+                <input
+                  type="number"
+                  id="batch-kwh-rate"
+                  value="16"
+                  step="0.5"
+                  class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-amber-700"
+                  oninput="updateGlobalState()"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1"
+                  >Next Rent Due Date</label
+                >
+                <div class="relative">
+                  <input
+                    type="text"
+                    id="batch-next-rent-date"
+                    value="December 1"
+                    readonly
+                    onclick="
+                      openDatePickerModal({
+                        targetType: 'batchInput',
+                        inputId: 'batch-next-rent-date',
+                        mode: 'fullDate',
+                        label: 'Batch Next Rent Payment Due',
+                      })
+                    "
+                    class="w-full rounded-lg border border-slate-300 pl-2.5 pr-7 py-1.5 text-xs bg-white cursor-pointer hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                  <i
+                    data-lucide="calendar"
+                    class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  ></i>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1"
+                  >Next Meter Reading Date</label
+                >
+                <div class="relative">
+                  <input
+                    type="text"
+                    id="batch-next-meter-date"
+                    value="December 1"
+                    readonly
+                    onclick="
+                      openDatePickerModal({
+                        targetType: 'batchInput',
+                        inputId: 'batch-next-meter-date',
+                        mode: 'fullDate',
+                        label: 'Batch Next Meter Reading',
+                      })
+                    "
+                    class="w-full rounded-lg border border-slate-300 pl-2.5 pr-7 py-1.5 text-xs bg-white cursor-pointer hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                  <i
+                    data-lucide="calendar"
+                    class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  ></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rich Text Editor: Footer Note -->
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1"
+                >Footer Note</label
+              >
+              <div
+                class="border border-slate-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 bg-white"
+              >
+                <div
+                  class="bg-slate-100 border-b border-slate-200 px-2 py-1 flex items-center gap-1"
+                >
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-footer-editor', 'bold');
+                    "
+                    class="px-2 py-0.5 rounded hover:bg-slate-200 text-xs font-bold text-slate-800"
+                    title="Bold (Ctrl+B)"
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-footer-editor', 'italic');
+                    "
+                    class="px-2 py-0.5 rounded hover:bg-slate-200 text-xs italic font-serif text-slate-800"
+                    title="Italic (Ctrl+I)"
+                  >
+                    I
+                  </button>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-footer-editor', 'underline');
+                    "
+                    class="px-2 py-0.5 rounded hover:bg-slate-200 text-xs underline text-slate-800"
+                    title="Underline (Ctrl+U)"
+                  >
+                    U
+                  </button>
+                  <span class="h-3.5 w-px bg-slate-300 mx-0.5"></span>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-footer-editor', 'blue');
+                    "
+                    class="px-1.5 py-0.5 rounded hover:bg-blue-50 text-[11px] font-bold text-blue-700 border border-blue-200 bg-white"
+                    title="Excel Blue Text"
+                  >
+                    Blue
+                  </button>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-footer-editor', 'black');
+                    "
+                    class="px-1.5 py-0.5 rounded hover:bg-slate-200 text-[11px] font-semibold text-slate-900 border border-slate-300 bg-white"
+                    title="Default Black Text"
+                  >
+                    Black
+                  </button>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-footer-editor', 'clear');
+                    "
+                    class="ml-auto px-1.5 py-0.5 rounded hover:bg-rose-50 text-[10px] font-medium text-slate-500 hover:text-rose-600"
+                    title="Clear formatting on selection"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div
+                  id="global-footer-editor"
+                  contenteditable="true"
+                  oninput="onRichEditorInput()"
+                  onpaste="handleRichPaste(event)"
+                  class="rich-editor-box p-2 min-h-[44px]"
+                ></div>
+              </div>
+            </div>
+
+            <!-- Rich Text Editor: Sign-off Line -->
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1"
+                >Sign-off Line</label
+              >
+              <div
+                class="border border-slate-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 bg-white"
+              >
+                <div
+                  class="bg-slate-100 border-b border-slate-200 px-2 py-1 flex items-center gap-1"
+                >
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-signoff-editor', 'bold');
+                    "
+                    class="px-2 py-0.5 rounded hover:bg-slate-200 text-xs font-bold text-slate-800"
+                    title="Bold (Ctrl+B)"
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-signoff-editor', 'italic');
+                    "
+                    class="px-2 py-0.5 rounded hover:bg-slate-200 text-xs italic font-serif text-slate-800"
+                    title="Italic (Ctrl+I)"
+                  >
+                    I
+                  </button>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-signoff-editor', 'underline');
+                    "
+                    class="px-2 py-0.5 rounded hover:bg-slate-200 text-xs underline text-slate-800"
+                    title="Underline (Ctrl+U)"
+                  >
+                    U
+                  </button>
+                  <span class="h-3.5 w-px bg-slate-300 mx-0.5"></span>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-signoff-editor', 'blue');
+                    "
+                    class="px-1.5 py-0.5 rounded hover:bg-blue-50 text-[11px] font-bold text-blue-700 border border-blue-200 bg-white"
+                    title="Excel Blue Text"
+                  >
+                    Blue
+                  </button>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-signoff-editor', 'black');
+                    "
+                    class="px-1.5 py-0.5 rounded hover:bg-slate-200 text-[11px] font-semibold text-slate-900 border border-slate-300 bg-white"
+                    title="Default Black Text"
+                  >
+                    Black
+                  </button>
+                  <button
+                    type="button"
+                    onmousedown="
+                      event.preventDefault();
+                      formatRichText('global-signoff-editor', 'clear');
+                    "
+                    class="ml-auto px-1.5 py-0.5 rounded hover:bg-rose-50 text-[10px] font-medium text-slate-500 hover:text-rose-600"
+                    title="Clear formatting on selection"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div
+                  id="global-signoff-editor"
+                  contenteditable="true"
+                  oninput="onRichEditorInput()"
+                  onpaste="handleRichPaste(event)"
+                  class="rich-editor-box p-2 min-h-[36px]"
+                ></div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-2">
+              <label class="text-xs font-medium text-slate-700"
+                >Print Center Cut/Fold Dashed Line</label
+              >
+              <input
+                type="checkbox"
+                id="global-print-cutline"
+                checked
+                class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                onchange="updateGlobalState()"
+              />
+            </div>
+
+            <button
+              onclick="applyBatchToAllRooms()"
+              class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow flex items-center justify-center gap-2 transition"
+            >
+              <i data-lucide="check-check" class="w-4 h-4"></i>
+              Apply Utility Period, Wifi, kWh Rate &amp; Next Dates to All Rooms
+            </button>
+          </div>
+        </div>
+
+        <!-- Sidebar Footer Tip -->
+        <div
+          class="p-3 bg-slate-50 border-t border-slate-200 text-[11px] text-slate-500 flex items-center justify-between"
+        >
+          <span id="page-counter-text" class="font-semibold text-slate-700"
+            >1 A4 Sheet</span
+          >
+        </div>
+      </aside>
+
+      <!-- RIGHT PANEL: LIVE A4 LANDSCAPE PRINT PREVIEW -->
+      <main id="preview-panel" class="flex-1 p-4 md:p-8 overflow-y-auto">
+        <!-- Helper Banner above A4 sheet (Hidden in Print) -->
+        <div
+          class="no-print max-w-[297mm] mx-auto mb-4 flex flex-wrap items-center justify-between gap-2 bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm"
+        >
+          <div class="flex items-center gap-2 text-xs text-slate-600">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span
+              ><strong>Interactive Preview:</strong> Click any date/period to
+              open the Calendar Picker, or click <strong>Electricity</strong> to
+              open the Submeter kWh Calculator.</span
+            >
+          </div>
+          <div class="flex items-center gap-3 text-xs">
+            <span class="text-slate-500"
+              >Click any room card below to select it in the sidebar</span
+            >
+          </div>
+        </div>
+
+        <!-- A4 Sheets Container -->
+        <div class="preview-scale-wrapper">
+          <div id="a4-sheets-container">
+            <!-- Dynamically populated A4 Landscape sheets (2 rooms per sheet) -->
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- QUICK TABLE MODAL FOR MULTI-ROOM ENTRY (Hidden in Print) -->
+    <div
+      id="bulk-modal"
+      class="no-print fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-6xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+      >
+        <div
+          class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between"
+        >
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="table-2" class="w-5 h-5 text-emerald-400"></i>
+            <div>
+              <h2 class="font-bold text-base">
+                Multi-Room Spreadsheet Quick Editor
+              </h2>
+              <p class="text-xs text-slate-400">
+                Rapidly edit all rooms in one table. Click the lightning icon
+                next to Electricity to compute submeter kWh.
+              </p>
+            </div>
+          </div>
+          <button
+            onclick="closeBulkTableModal()"
+            class="text-slate-400 hover:text-white p-1 rounded-lg"
+          >
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <div class="p-6 overflow-auto flex-1">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr
+                class="bg-slate-100 text-slate-700 border-b border-slate-300 font-bold"
+              >
+                <th class="p-2.5 border">Room No.</th>
+                <th class="p-2.5 border">Tenants</th>
+                <th class="p-2.5 border">Rent Mode</th>
+                <th class="p-2.5 border">Rent Period</th>
+                <th class="p-2.5 border">Monthly Rent</th>
+                <th class="p-2.5 border">Move-in Day</th>
+                <th class="p-2.5 border">Rem. Days</th>
+                <th class="p-2.5 border">Electricity (₱)</th>
+                <th class="p-2.5 border">Water (₱)</th>
+                <th class="p-2.5 border">Wifi (₱)</th>
+                <th class="p-2.5 border bg-amber-50">Total Due</th>
+                <th class="p-2.5 border text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="bulk-table-body" class="divide-y divide-slate-200">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div
+          class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between"
+        >
+          <button
+            onclick="
+              addRoom();
+              renderBulkTable();
+            "
+            class="px-3 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5"
+          >
+            <i data-lucide="plus" class="w-4 h-4"></i> Add Another Room Row
+          </button>
+          <button
+            onclick="closeBulkTableModal()"
+            class="px-5 py-2 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white"
+          >
+            Done & Return to Preview
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DATE PICKER MODAL (Hidden in Print) -->
+    <div
+      id="date-picker-modal"
+      class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden"
+      >
+        <div
+          class="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between"
+        >
+          <div class="flex items-center gap-2">
+            <i data-lucide="calendar-days" class="w-5 h-5 text-amber-400"></i>
+            <h3 id="dp-modal-title" class="font-bold text-sm">Select Date</h3>
+          </div>
+          <button
+            onclick="closeDatePickerModal()"
+            class="text-slate-400 hover:text-white p-1 rounded-lg"
+          >
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div class="p-5 space-y-4">
+          <!-- Single Date Picker Container (Move-in Day, Next Rent Due, Next Meter Reading) -->
+          <div id="dp-single-container" class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1"
+                >Pick a Date from Calendar</label
+              >
+              <input
+                type="date"
+                id="dp-single-input"
+                onclick="if (this.showPicker) this.showPicker();"
+                oninput="updateDatePickerPreview()"
+                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
+              />
+            </div>
+
+            <!-- Move-in Day Auto-Sync Options -->
+            <div
+              id="dp-movein-autocalc-wrap"
+              class="hidden bg-indigo-50/70 border border-indigo-200 rounded-xl p-3 space-y-2"
+            >
+              <label
+                class="flex items-center gap-2 text-xs text-slate-800 font-medium cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  id="dp-auto-rem-days"
+                  checked
+                  class="w-4 h-4 text-indigo-600 rounded"
+                  onchange="updateDatePickerPreview()"
+                />
+                <span
+                  >Sync <strong>Remaining Days</strong> (<span
+                    id="dp-rem-days-preview"
+                    class="font-bold text-indigo-700"
+                    >16 days</span
+                  >)</span
+                >
+              </label>
+              <label
+                class="flex items-center gap-2 text-xs text-slate-800 font-medium cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  id="dp-sync-movein-period"
+                  checked
+                  class="w-4 h-4 text-indigo-600 rounded"
+                  onchange="updateDatePickerPreview()"
+                />
+                <span
+                  >Sync <strong>Rent Period</strong> to
+                  <span
+                    id="dp-movein-period-preview"
+                    class="font-bold text-indigo-700"
+                    >Nov 15 to Dec 1</span
+                  ></span
+                >
+              </label>
+            </div>
+          </div>
+
+          <!-- Date Range Picker Container (Rent Period & Utility Billing Period) -->
+          <div id="dp-range-container" class="hidden space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1"
+                  >Start Date (Move-in)</label
+                >
+                <input
+                  type="date"
+                  id="dp-start-input"
+                  onclick="if (this.showPicker) this.showPicker();"
+                  oninput="onRangeStartInputChanged()"
+                  class="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1"
+                  >End Date (Cut-off)</label
+                >
+                <input
+                  type="date"
+                  id="dp-end-input"
+                  onclick="if (this.showPicker) this.showPicker();"
+                  oninput="updateDatePickerPreview()"
+                  class="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <!-- Rent Period Auto-Sync Panel -->
+            <div
+              id="dp-rent-period-sync-wrap"
+              class="hidden bg-indigo-50/80 border border-indigo-200 rounded-xl p-3 space-y-2.5"
+            >
+              <label
+                class="flex items-center justify-between text-xs font-semibold text-indigo-950 cursor-pointer"
+              >
+                <span class="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="dp-sync-rent-fields"
+                    checked
+                    class="w-4 h-4 text-indigo-600 rounded"
+                    onchange="updateDatePickerPreview()"
+                  />
+                  Auto-sync Move-in Day &amp; Remaining Days
+                </span>
+                <span
+                  class="text-[10px] bg-indigo-200/70 text-indigo-900 px-2 py-0.5 rounded-full font-bold"
+                  >Prorated Sync</span
+                >
+              </label>
+
+              <div
+                class="grid grid-cols-2 gap-2 pt-1 border-t border-indigo-200/60 text-xs"
+              >
+                <div
+                  class="bg-white/90 rounded-lg p-2 border border-indigo-100"
+                >
+                  <span
+                    class="block text-[10px] uppercase tracking-wider text-slate-400 font-bold"
+                    >New Move-in Day</span
+                  >
+                  <span
+                    id="dp-sync-movein-preview"
+                    class="font-bold text-blue-700 text-sm"
+                    >15th Day</span
+                  >
+                </div>
+                <div
+                  class="bg-white/90 rounded-lg p-2 border border-indigo-100"
+                >
+                  <div class="flex items-center justify-between">
+                    <span
+                      class="text-[10px] uppercase tracking-wider text-slate-400 font-bold"
+                      >Remaining Days</span
+                    >
+                  </div>
+                  <input
+                    type="number"
+                    id="dp-sync-remdays-input"
+                    min="1"
+                    max="60"
+                    value="29"
+                    class="w-full font-bold text-blue-700 text-sm bg-transparent border-b border-indigo-200 focus:outline-none focus:border-indigo-600"
+                  />
+                </div>
+              </div>
+
+              <!-- Formula Selector Pills -->
+              <div
+                class="flex items-center justify-between gap-1.5 text-[11px] pt-0.5"
+              >
+                <span class="text-slate-600 font-medium">Calculation:</span>
+                <div class="flex items-center gap-1">
+                  <button
+                    type="button"
+                    id="btn-calc-span"
+                    onclick="setRemDaysFormulaMode('span')"
+                    class="px-2 py-1 rounded font-semibold bg-indigo-600 text-white transition"
+                  >
+                    Date Span (<span id="dp-span-val">16</span>d)
+                  </button>
+                  <button
+                    type="button"
+                    id="btn-calc-divisor"
+                    onclick="setRemDaysFormulaMode('divisor')"
+                    class="px-2 py-1 rounded font-semibold bg-white text-slate-700 border border-slate-300 transition"
+                  >
+                    30 - Day + 1 (<span id="dp-divisor-val">16</span>d)
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Formatted Output Preview -->
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <label
+              class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1"
+              >Formatted Statement Text</label
+            >
+            <input
+              type="text"
+              id="dp-formatted-preview"
+              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-bold text-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+            <p class="text-[11px] text-slate-400 mt-1">
+              Auto-formatted from calendar above, or tweak the text directly.
+            </p>
+          </div>
+        </div>
+
+        <div
+          class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2"
+        >
+          <button
+            onclick="closeDatePickerModal()"
+            class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 transition"
+          >
+            Cancel
+          </button>
+          <button
+            onclick="applyDatePickerSelection()"
+            class="px-5 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition"
+          >
+            Apply &amp; Sync
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ELECTRICITY SUBMETER (kWh) CALCULATOR MODAL (Hidden in Print) -->
+    <div
+      id="kwh-calc-modal"
+      class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden"
+      >
+        <div
+          class="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between"
+        >
+          <div class="flex items-center gap-2">
+            <i data-lucide="zap" class="w-5 h-5 text-amber-400"></i>
+            <h3 id="kwh-modal-title" class="font-bold text-sm">
+              Electricity Submeter Calculator
+            </h3>
+          </div>
+          <button
+            onclick="closeKwhModal()"
+            class="text-slate-400 hover:text-white p-1 rounded-lg"
+          >
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div class="p-5 space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1"
+                >Previous Reading (kWh)</label
+              >
+              <input
+                type="number"
+                id="kwh-prev-input"
+                step="0.1"
+                min="0"
+                placeholder="e.g. 120"
+                oninput="updateKwhPreview()"
+                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1"
+                >Current Reading (kWh)</label
+              >
+              <input
+                type="number"
+                id="kwh-curr-input"
+                step="0.1"
+                min="0"
+                placeholder="e.g. 130"
+                oninput="updateKwhPreview()"
+                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 items-end">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1"
+                >Rate per kWh (₱)</label
+              >
+              <input
+                type="number"
+                id="kwh-rate-input"
+                step="0.25"
+                min="0"
+                placeholder="e.g. 16.00"
+                oninput="updateKwhPreview()"
+                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-blue-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div
+              class="bg-slate-100 rounded-lg p-2.5 border border-slate-200 flex items-center justify-between"
+            >
+              <span class="text-xs font-medium text-slate-600"
+                >Consumption:</span
+              >
+              <span id="kwh-used-badge" class="text-sm font-bold text-slate-900"
+                >10 kWh</span
+              >
+            </div>
+          </div>
+
+          <div
+            id="kwh-warning-msg"
+            class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 font-medium"
+          >
+            Current reading is lower than previous reading. Please verify the
+            submeter numbers.
+          </div>
+
+          <!-- Computed Bill Result -->
+          <div
+            class="bg-amber-50/90 p-3.5 rounded-xl border border-amber-200 flex items-center justify-between"
+          >
+            <div>
+              <span
+                class="block text-[11px] font-bold uppercase tracking-wider text-amber-900"
+                >Computed Electricity Bill</span
+              >
+              <span id="kwh-formula-breakdown" class="text-xs text-amber-800"
+                >(130 - 120) × ₱16.00</span
+              >
+            </div>
+            <span
+              id="kwh-total-preview"
+              class="text-lg font-extrabold text-blue-700"
+              >₱160.00</span
+            >
+          </div>
+
+          <label
+            class="flex items-center gap-2 text-xs text-slate-600 cursor-pointer pt-1"
+          >
+            <input
+              type="checkbox"
+              id="kwh-save-global-rate"
+              class="w-4 h-4 text-indigo-600 rounded"
+            />
+            <span
+              >Also save this <strong>Rate per kWh</strong> as the default for
+              all rooms</span
+            >
+          </label>
+        </div>
+
+        <div
+          class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2"
+        >
+          <button
+            onclick="closeKwhModal()"
+            class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 transition"
+          >
+            Cancel
+          </button>
+          <button
+            onclick="applyKwhCalculation()"
+            class="px-5 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm flex items-center gap-1.5 transition"
+          >
+            <i data-lucide="check" class="w-4 h-4"></i>
+            Apply Electricity Amount
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div
+      id="toast"
+      class="no-print fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl border border-slate-700 text-xs font-medium flex items-center gap-2 transition-all duration-300 opacity-0 pointer-events-none translate-y-2"
+    >
+      <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+      <span id="toast-msg">Saved</span>
+    </div>
+
+    <!-- Modular ES6 Entry Point -->
+    <script type="module" src="js/app.js"></script>
+  </body>
 </html>
